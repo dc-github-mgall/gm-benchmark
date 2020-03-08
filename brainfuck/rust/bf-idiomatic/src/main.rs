@@ -8,7 +8,7 @@ struct Program<'source, R: Read, W: Write> {
     prev_open_brace: usize,
     ptr: usize,
     pc: usize,
-    tape: Vec<u8>,
+    tape: [u8; 8196],
 }
 
 impl<'source, R: Read, W: Write> Program<'source, R, W> {
@@ -20,7 +20,7 @@ impl<'source, R: Read, W: Write> Program<'source, R, W> {
             prev_open_brace: 0,
             ptr: 0,
             pc: 0,
-            tape: vec![0; 8196],
+            tape: [0; 8196],
         }
     }
 
