@@ -10,3 +10,4 @@ edition = "2018"
 anyhow = "1.0.26"
 serde_yaml = "0.8.11"
 serde = { version = "1.0.104", features = ["derive"] }
+ansi_term = "0.12.1"

@@ -1,3 +1,4 @@
+use ansi_term::Color;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt;
@@ -47,8 +48,8 @@ impl LangType {
 impl fmt::Display for LangType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LangType::Rust => write!(f, "Rust"),
-            LangType::Python => write!(f, "Python"),
+            LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
+            LangType::Python => write!(f, "{}", Color::Blue.paint("Python")),
         }
     }
 }
@@ -65,12 +66,6 @@ pub struct Program {
 impl Program {
     pub fn compile(&self, target_path: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
         let program_path = Path::new(target_path).join(&self.path);
-        println!(
-            "Compile {}({}) from {}",
-            self.name,
-            self.lang,
-            program_path.display()
-        );
         self.lang.compile(program_path, ret)
     }
 
@@ -121,8 +116,9 @@ pub struct Bench {
 impl Bench {
     pub fn bench(&self, target_path: &str) -> anyhow::Result<()> {
         let mut compile_processes = Vec::with_capacity(self.programs.len() * 2);
+        let bench_name = Color::Cyan.paint(&self.name);
 
-        println!("Start compile bench {}...", self.name);
+        println!("Start compile bench {}...", bench_name);
 
         for program in self.programs.iter() {
             program.compile(target_path, &mut compile_processes)?;
@@ -149,11 +145,12 @@ impl Bench {
             assert!(status.success());
         }
 
-        println!("Compile bench {} done!", self.name);
-        println!("Start bench {}...", self.name);
+        println!("Compile {} done!", bench_name);
+        println!("Start {}...", bench_name);
 
         for program in self.programs.iter() {
             let mut sum = Duration::new(0, 0);
+            let program_name = Color::Green.paint(&program.name);
 
             const BENCH_COUNT: u32 = 5;
 
@@ -182,10 +179,10 @@ impl Bench {
                 assert!(output.status.success());
 
                 println!(
-                    "Benchmark [{}({})] elapsed: {}s",
-                    program.name,
+                    "Benchmark {}({}) elapsed: {}s",
+                    program_name,
                     program.lang,
-                    elapsed.as_secs_f64()
+                    Color::Yellow.paint(elapsed.as_secs_f64().to_string())
                 );
 
                 sum += elapsed;
@@ -196,8 +193,8 @@ impl Bench {
             let average = sum / BENCH_COUNT;
 
             println!(
-                "Benchmark [{}({})] done! average: {}s",
-                program.name,
+                "Benchmark {}({}) done! average: {}s",
+                program_name,
                 program.lang,
                 average.as_secs_f64(),
             );
