@@ -10,12 +10,12 @@ stdin:
 stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
 programs:
-    - lang: node
+    - lang: java-script
       impl:
-          - nodejs
-      name: Node Implementation
+          - node
+      name: JavaScript Implementation
       idiomatic: true
-      path: node
+      path: js
       bin: bf.js
 
     - lang: python
