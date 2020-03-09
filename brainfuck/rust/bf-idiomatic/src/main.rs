@@ -1,81 +1,103 @@
+use std::collections::BTreeMap;
 use std::env;
 use std::io::{self, BufReader, BufWriter, Bytes, Read, Write};
 
-struct Program<'source, R: Read, W: Write> {
-    source: &'source [u8],
+struct Program<R: Read, W: Write> {
+    source: Vec<u8>,
+    bracket_pair: BTreeMap<usize, usize>,
     out: W,
     input: Bytes<R>,
-    prev_open_brace: usize,
-    ptr: usize,
-    pc: usize,
-    tape: [u8; 8196],
 }
 
-impl<'source, R: Read, W: Write> Program<'source, R, W> {
-    pub fn new(source: &'source [u8], input: R, out: W) -> Self {
+impl<R: Read, W: Write> Program<R, W> {
+    pub fn new(source: &[u8], input: R, out: W) -> Self {
+        let mut bf_source = Vec::with_capacity(source.len());
+        let mut pairs = BTreeMap::new();
+        let mut stack = Vec::new();
+
+        for s in source.iter() {
+            match s {
+                b'>' | b'<' | b'+' | b'-' | b',' | b'.' => {
+                    bf_source.push(*s);
+                }
+                b'[' => {
+                    stack.push(bf_source.len());
+                    bf_source.push(*s);
+                }
+                b']' => {
+                    let left = stack.pop().unwrap();
+                    let right = bf_source.len();
+                    bf_source.push(*s);
+                    pairs.insert(left, right);
+                    pairs.insert(right, left);
+                }
+                _ => {}
+            }
+        }
+
         Self {
-            source,
             out,
             input: input.bytes(),
-            prev_open_brace: 0,
-            ptr: 0,
-            pc: 0,
-            tape: [0; 8196],
+            source: bf_source,
+            bracket_pair: pairs,
         }
     }
 
-    fn run_byte(&mut self, byte: u8) -> anyhow::Result<()> {
-        self.pc += 1;
+    fn run_byte(
+        &mut self,
+        pc: &mut usize,
+        ptr: &mut usize,
+        tape: &mut Vec<u8>,
+        byte: u8,
+    ) -> anyhow::Result<()> {
         match byte {
             b'>' => {
-                self.ptr += 1;
+                *ptr += 1;
+                if *ptr >= tape.len() {
+                    tape.push(0);
+                }
             }
             b'<' => {
-                self.ptr -= 1;
+                *ptr = ptr.saturating_sub(1);
             }
             b'+' => {
-                self.tape[self.ptr] += 1;
+                tape[*ptr] += 1;
             }
             b'-' => {
-                self.tape[self.ptr] -= 1;
+                tape[*ptr] -= 1;
             }
             b'.' => {
-                self.out.write(&[self.tape[self.ptr]])?;
+                self.out.write(&[tape[*ptr]])?;
             }
             b',' => {
-                self.tape[self.ptr] = self.input.next().unwrap()?;
+                tape[*ptr] = self.input.next().unwrap()?;
             }
             b'[' => {
-                self.prev_open_brace = self.pc - 1;
-                while self.tape[self.ptr] == 0 {
-                    while let Some(&byte) = self.source.get(self.pc) {
-                        if byte == b']' {
-                            if self.tape[self.ptr] != 0 {
-                                continue;
-                            } else {
-                                self.pc += 1;
-                                return Ok(());
-                            }
-                        } else {
-                            self.run_byte(byte)?;
-                        }
-                    }
+                if tape[*ptr] == 0 {
+                    *pc = self.bracket_pair[pc];
+                    return Ok(());
                 }
             }
             b']' => {
-                if self.tape[self.ptr] != 0 {
-                    self.pc = self.prev_open_brace;
+                if tape[*ptr] != 0 {
+                    *pc = self.bracket_pair[pc];
+                    return Ok(());
                 }
             }
             _ => {}
         }
 
+        *pc += 1;
+
         Ok(())
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
-        while let Some(byte) = self.source.get(self.pc) {
-            self.run_byte(*byte)?;
+        let mut pc = 0;
+        let mut ptr = 0;
+        let mut tape = vec![0; 8096];
+        while let Some(byte) = self.source.get(pc).copied() {
+            self.run_byte(&mut pc, &mut ptr, &mut tape, byte)?;
         }
 
         Ok(())
@@ -90,8 +112,9 @@ fn main() -> anyhow::Result<()> {
     let stdout = stdout.lock();
     let mut stdout = BufWriter::with_capacity(8196, stdout);
 
-    let source_file = env::args().skip(1).next().unwrap();
-    let source = std::fs::read(&source_file)?;
+    let source_length = env::args().skip(1).next().unwrap().parse()?;
+    let mut source = vec![0u8; source_length];
+    stdin.read(&mut source)?;
 
     let mut program = Program::new(&source, &mut stdin, &mut stdout);
 

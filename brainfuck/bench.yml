@@ -1,0 +1,18 @@
+name: BrainFuck
+
+args:
+    - $CONTENT_LENGTH$
+
+stdin:
+    type: file
+    content: bench.bf
+
+stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
+
+programs:
+    - lang: rust
+      name: Idiomatic Rust
+      idiomatic: true
+      path: rust/bf-idiomatic
+      bin: bf-idiomatic
+
