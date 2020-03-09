@@ -10,9 +10,14 @@ stdin:
 stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
 programs:
+    - lang: python
+      name: Simple Python
+      idiomatic: true
+      path: python
+      bin: bf.py
+
     - lang: rust
       name: Idiomatic Rust
       idiomatic: true
       path: rust/bf-idiomatic
       bin: bf-idiomatic
-
