@@ -11,8 +11,9 @@ use std::time::{Duration, Instant};
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum LangType {
-    Rust,
+    Node,
     Python,
+    Rust,
 }
 
 impl LangType {
@@ -27,6 +28,7 @@ impl LangType {
                         .spawn()?,
                 );
             }
+            LangType::Node => {}
             LangType::Python => {}
         }
 
@@ -35,6 +37,11 @@ impl LangType {
 
     pub fn get_command(self, program_path: PathBuf, bin: &str) -> Command {
         match self {
+            LangType::Node => {
+                let mut com = Command::new("node");
+                com.arg(program_path.join(bin));
+                com
+            }
             LangType::Python => {
                 let mut com = Command::new("python");
                 com.arg(program_path.join(bin));
@@ -48,8 +55,9 @@ impl LangType {
 impl fmt::Display for LangType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
+            LangType::Node => write!(f, "{}", Color::Green.paint("Node")),
             LangType::Python => write!(f, "{}", Color::Blue.paint("Python")),
+            LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
         }
     }
 }

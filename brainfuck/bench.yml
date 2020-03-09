@@ -10,6 +10,12 @@ stdin:
 stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
 programs:
+    - lang: node
+      name: Node Implementation
+      idiomatic: true
+      path: node
+      bin: bf.js
+
     - lang: python
       name: Simple Python
       idiomatic: true
