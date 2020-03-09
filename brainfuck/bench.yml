@@ -10,19 +10,26 @@ stdin:
 stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
 programs:
-    - lang: node
-      name: Node Implementation
+    - lang: java-script
+      impl:
+          - node
+      name: JavaScript Implementation
       idiomatic: true
-      path: node
+      path: js
       bin: bf.js
 
     - lang: python
+      impl:
+          - python
+          - pypy
       name: Simple Python
       idiomatic: true
       path: python
       bin: bf.py
 
     - lang: rust
+      impl:
+          - rustc
       name: Idiomatic Rust
       idiomatic: true
       path: rust/bf-idiomatic

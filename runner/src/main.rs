@@ -11,39 +11,54 @@ use std::time::{Duration, Instant};
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum LangType {
-    Node,
+    JavaScript,
     Python,
     Rust,
 }
 
 impl LangType {
-    pub fn compile(self, program_path: PathBuf, ret: &mut Vec<Child>) -> anyhow::Result<()> {
+    pub fn compile(
+        self,
+        program_path: &PathBuf,
+        implementation: &str,
+        ret: &mut Vec<Child>,
+    ) -> anyhow::Result<()> {
         match self {
-            LangType::Rust => {
-                ret.push(
-                    Command::new("cargo")
-                        .current_dir(&program_path)
-                        .env("RUSTFLAGS", "-Ctarget-cpu=native")
-                        .args(&["build", "--release"])
-                        .spawn()?,
-                );
-            }
-            LangType::Node => {}
+            LangType::Rust => match implementation {
+                "rustc" => {
+                    ret.push(
+                        Command::new("cargo")
+                            .current_dir(&program_path)
+                            .env("RUSTFLAGS", "-Ctarget-cpu=native")
+                            .args(&["build", "--release"])
+                            .spawn()?,
+                    );
+                }
+                other => panic!("Unknown implementation: {}", other),
+            },
+            LangType::JavaScript => {}
             LangType::Python => {}
         }
 
         Ok(())
     }
 
-    pub fn get_command(self, program_path: PathBuf, bin: &str) -> Command {
+    pub fn get_command(self, program_path: &PathBuf, implementation: &str, bin: &str) -> Command {
         match self {
-            LangType::Node => {
-                let mut com = Command::new("node");
+            LangType::JavaScript => {
+                let mut com = Command::new(match implementation {
+                    "node" => "node",
+                    other => panic!("Unknown implementation: {}", other),
+                });
                 com.arg(program_path.join(bin));
                 com
             }
             LangType::Python => {
-                let mut com = Command::new("python");
+                let mut com = Command::new(match implementation {
+                    "pypy" => "pypy",
+                    "python" => "python",
+                    other => panic!("Unknown implementation: {}", other),
+                });
                 com.arg(program_path.join(bin));
                 com
             }
@@ -55,7 +70,7 @@ impl LangType {
 impl fmt::Display for LangType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LangType::Node => write!(f, "{}", Color::Green.paint("Node")),
+            LangType::JavaScript => write!(f, "{}", Color::Green.paint("JavaScript")),
             LangType::Python => write!(f, "{}", Color::Blue.paint("Python")),
             LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
         }
@@ -66,6 +81,8 @@ impl fmt::Display for LangType {
 pub struct Program {
     lang: LangType,
     name: String,
+    #[serde(rename = "impl")]
+    implementations: Vec<String>,
     idiomatic: bool,
     path: String,
     bin: String,
@@ -74,12 +91,80 @@ pub struct Program {
 impl Program {
     pub fn compile(&self, target_path: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
         let program_path = Path::new(target_path).join(&self.path);
-        self.lang.compile(program_path, ret)
+
+        for implementation in &self.implementations {
+            self.lang.compile(&program_path, implementation, ret)?;
+        }
+
+        Ok(())
     }
 
-    pub fn get_command(&self, target_path: &str) -> Command {
+    pub fn bench(
+        &self,
+        target_path: &str,
+        args: &[String],
+        stdin_content: &[u8],
+        expect_stdout: &[u8],
+    ) -> anyhow::Result<()> {
         let program_path = Path::new(target_path).join(&self.path);
-        self.lang.get_command(program_path, &self.bin)
+        let program_name = Color::Green.paint(&self.name);
+
+        for implementation in &self.implementations {
+            let mut sum = Duration::new(0, 0);
+
+            const BENCH_COUNT: u32 = 5;
+
+            for _ in 0..BENCH_COUNT {
+                let mut command = self
+                    .lang
+                    .get_command(&program_path, implementation, &self.bin);
+                command
+                    .current_dir(target_path)
+                    .args(args)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::inherit());
+
+                let start = Instant::now();
+                let mut bench_process = command.spawn()?;
+
+                bench_process
+                    .stdin
+                    .as_mut()
+                    .unwrap()
+                    .write_all(stdin_content)?;
+
+                let output = bench_process.wait_with_output()?;
+
+                let elapsed = start.elapsed();
+
+                assert!(output.status.success());
+
+                println!(
+                    "Benchmark {}({}[{}]) elapsed: {}s",
+                    program_name,
+                    self.lang,
+                    Color::Purple.paint(implementation),
+                    Color::Yellow.paint(elapsed.as_secs_f64().to_string())
+                );
+
+                sum += elapsed;
+
+                assert_eq!(expect_stdout, output.stdout.as_slice());
+            }
+
+            let average = sum / BENCH_COUNT;
+
+            println!(
+                "Benchmark {}({}[{}]) done! average: {}s",
+                program_name,
+                self.lang,
+                Color::Purple.paint(implementation),
+                Color::Yellow.paint(average.as_secs_f64().to_string()),
+            );
+        }
+
+        Ok(())
     }
 }
 
@@ -157,55 +242,7 @@ impl Bench {
         println!("Start {}...", bench_name);
 
         for program in self.programs.iter() {
-            let mut sum = Duration::new(0, 0);
-            let program_name = Color::Green.paint(&program.name);
-
-            const BENCH_COUNT: u32 = 5;
-
-            for _ in 0..BENCH_COUNT {
-                let mut command = program.get_command(target_path);
-                command
-                    .current_dir(target_path)
-                    .args(&args)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::inherit());
-
-                let start = Instant::now();
-                let mut bench_process = command.spawn()?;
-
-                bench_process
-                    .stdin
-                    .as_mut()
-                    .unwrap()
-                    .write_all(&stdin_content)?;
-
-                let output = bench_process.wait_with_output()?;
-
-                let elapsed = start.elapsed();
-
-                assert!(output.status.success());
-
-                println!(
-                    "Benchmark {}({}) elapsed: {}s",
-                    program_name,
-                    program.lang,
-                    Color::Yellow.paint(elapsed.as_secs_f64().to_string())
-                );
-
-                sum += elapsed;
-
-                assert_eq!(self.stdout.as_bytes(), output.stdout.as_slice());
-            }
-
-            let average = sum / BENCH_COUNT;
-
-            println!(
-                "Benchmark {}({}) done! average: {}s",
-                program_name,
-                program.lang,
-                average.as_secs_f64(),
-            );
+            program.bench(target_path, &args, &stdin_content, self.stdout.as_bytes())?;
         }
 
         Ok(())
