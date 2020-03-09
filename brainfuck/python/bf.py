@@ -1,6 +1,6 @@
 import sys
 
-if sys.playform == "win32":
+if sys.platform == "win32":
     import os, msvcrt
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
