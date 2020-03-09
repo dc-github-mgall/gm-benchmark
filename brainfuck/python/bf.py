@@ -1,8 +1,13 @@
 import sys
 
-if sys.platform == "win32":
-    import os, msvcrt
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+# for issue #3
+stdout = open(sys.__stdout__.fileno(), 
+              mode=sys.__stdout__.mode, 
+              buffering=1, 
+              encoding=sys.__stdout__.encoding, 
+              errors=sys.__stdout__.errors, 
+              newline='\n', 
+              closefd=False)
 
 class Program():
     def __init__(self, source):
@@ -44,7 +49,7 @@ class Program():
             elif char == ',':
                 tape[ptr] = sys.stdin.read(1)
             elif char == '.':
-                sys.stdout.write(chr(tape[ptr]))
+                stdout.write(chr(tape[ptr]))
             elif char == '[' and tape[ptr] == 0:
                 pc = self.bracket_map[pc]
             elif char == ']' and tape[ptr] != 0:
@@ -54,5 +59,5 @@ class Program():
 length = int(sys.argv[1])
 source = sys.stdin.read(length)
 Program(source).run()
-sys.stdout.flush()
+stdout.flush()
 
