@@ -3,22 +3,26 @@
 ## Results
 
 ```
+gm-benchmark on  master [!] took 14s
+❯ ./bench.sh
+   Compiling gm-benchmark-runner v0.1.0 (/home/riey/repos/gm-benchmark/runner)
+    Finished release [optimized] target(s) in 2.14s
+     Running `target/release/gm-benchmark-runner ../brainfuck`
 Start compile bench BrainFuck...
-Compile Simple Python(Python) from ../brainfuck/python
-Compile Idiomatic Rust(Rust) from ../brainfuck/rust/bf-idiomatic
     Finished release [optimized] target(s) in 0.00s
-Compile bench BrainFuck done!
-Start bench BrainFuck...
-Benchmark [Simple Python(Python)] elapsed: 7.434326254s
-Benchmark [Simple Python(Python)] elapsed: 7.582476735s
-Benchmark [Simple Python(Python)] elapsed: 7.43943986s
-Benchmark [Simple Python(Python)] elapsed: 7.506541262s
-Benchmark [Simple Python(Python)] elapsed: 7.746382165s
-Benchmark [Simple Python(Python)] done! average: 7.541833255s
-Benchmark [Idiomatic Rust(Rust)] elapsed: 0.085938325s
-Benchmark [Idiomatic Rust(Rust)] elapsed: 0.085017934s
-Benchmark [Idiomatic Rust(Rust)] elapsed: 0.085242114s
-Benchmark [Idiomatic Rust(Rust)] elapsed: 0.085436734s
-Benchmark [Idiomatic Rust(Rust)] elapsed: 0.085877915s
-Benchmark [Idiomatic Rust(Rust)] done! average: 0.085502604s
+Compile BrainFuck done!
+Start BrainFuck...
+Benchmark Simple Python(Python) elapsed: 7.5877921409999995s
+Benchmark Simple Python(Python) elapsed: 7.489526112s
+Benchmark Simple Python(Python) elapsed: 7.468602476s
+Benchmark Simple Python(Python) elapsed: 8.025125965s
+Benchmark Simple Python(Python) elapsed: 7.631555025s
+Benchmark Simple Python(Python) done! average: 7.640520343s
+Benchmark Idiomatic Rust(Rust) elapsed: 0.084949083s
+Benchmark Idiomatic Rust(Rust) elapsed: 0.084647474s
+Benchmark Idiomatic Rust(Rust) elapsed: 0.084806823s
+Benchmark Idiomatic Rust(Rust) elapsed: 0.084647743s
+Benchmark Idiomatic Rust(Rust) elapsed: 0.084728724s
+Benchmark Idiomatic Rust(Rust) done! average: 0.084755969s
+
 ```
