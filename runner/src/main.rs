@@ -5,7 +5,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
@@ -139,39 +139,52 @@ impl Bench {
 
         for (i, (_, bin_path)) in compile_processes.iter().enumerate() {
             let program = &self.programs[i];
+            let mut sum = Duration::new(0, 0);
+
+            const BENCH_COUNT: u32 = 10;
+
+            for _ in 0..BENCH_COUNT {
+                let start = Instant::now();
+                let mut bench_process = Command::new(bin_path)
+                    .current_dir(path)
+                    .args(&args)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::inherit())
+                    .spawn()?;
+
+                bench_process
+                    .stdin
+                    .as_mut()
+                    .unwrap()
+                    .write_all(&stdin_content)?;
+
+                let output = bench_process.wait_with_output()?;
+
+                let elapsed = start.elapsed();
+
+                assert!(output.status.success());
+
+                println!(
+                    "Benchmark [{}({})] elapsed: {}s",
+                    program.name,
+                    program.lang,
+                    elapsed.as_secs_f64()
+                );
+
+                sum += elapsed;
+
+                assert_eq!(self.stdout.as_bytes(), output.stdout.as_slice());
+            }
+
+            let average = sum / BENCH_COUNT;
+
             println!(
-                "Start benchmark [{}] in {}...",
-                program.name, bin_path.display()
-            );
-
-            let start = Instant::now();
-            let mut bench_process = Command::new(bin_path)
-                .current_dir(path)
-                .args(&args)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::inherit())
-                .spawn()?;
-
-            bench_process
-                .stdin
-                .as_mut()
-                .unwrap()
-                .write_all(&stdin_content)?;
-
-            let output = bench_process.wait_with_output()?;
-
-            let elapsed = start.elapsed();
-
-            assert!(output.status.success());
-
-            println!(
-                "Benchmark [{}] done! elapsed: {}s",
+                "Benchmark [{}({})] done! average: {}s",
                 program.name,
-                elapsed.as_secs_f64()
+                program.lang,
+                average.as_secs_f64(),
             );
-
-            assert_eq!(self.stdout.as_bytes(), output.stdout.as_slice());
         }
 
         Ok(())
