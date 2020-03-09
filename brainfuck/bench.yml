@@ -11,18 +11,25 @@ stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
 programs:
     - lang: node
+      impl:
+          - nodejs
       name: Node Implementation
       idiomatic: true
       path: node
       bin: bf.js
 
     - lang: python
+      impl:
+          - python
+          - pypy
       name: Simple Python
       idiomatic: true
       path: python
       bin: bf.py
 
     - lang: rust
+      impl:
+          - rustc
       name: Idiomatic Rust
       idiomatic: true
       path: rust/bf-idiomatic

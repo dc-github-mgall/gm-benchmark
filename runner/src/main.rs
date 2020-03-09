@@ -17,7 +17,7 @@ pub enum LangType {
 }
 
 impl LangType {
-    pub fn compile(self, program_path: PathBuf, ret: &mut Vec<Child>) -> anyhow::Result<()> {
+    pub fn compile(self, program_path: PathBu, implementation: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
         match self {
             LangType::Rust => {
                 ret.push(
@@ -35,7 +35,7 @@ impl LangType {
         Ok(())
     }
 
-    pub fn get_command(self, program_path: PathBuf, bin: &str) -> Command {
+    pub fn get_command(self, program_path: PathBuf, implementation: &str, bin: &str) -> Command {
         match self {
             LangType::Node => {
                 let mut com = Command::new("node");
@@ -43,7 +43,7 @@ impl LangType {
                 com
             }
             LangType::Python => {
-                let mut com = Command::new("python");
+                let mut com = Command::new("pypy");
                 com.arg(program_path.join(bin));
                 com
             }
@@ -66,6 +66,8 @@ impl fmt::Display for LangType {
 pub struct Program {
     lang: LangType,
     name: String,
+    #[serde(rename = "impl")]
+    implementations: Vec<String>,
     idiomatic: bool,
     path: String,
     bin: String,
@@ -74,11 +76,20 @@ pub struct Program {
 impl Program {
     pub fn compile(&self, target_path: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
         let program_path = Path::new(target_path).join(&self.path);
-        self.lang.compile(program_path, ret)
+
+        for implementation in &self.implementations {
+            self.lang.compile(program_path, implementation, ret)?;
+        }
+
+        Ok(())
     }
 
-    pub fn get_command(&self, target_path: &str) -> Command {
+    pub fn bench(&self, target_path: &str, ret: &mut Vec<()>) -> Command {
         let program_path = Path::new(target_path).join(&self.path);
+
+        for implementation in &self.implementations {
+            ret.push(self.lang.get_command(&program_path, implementation)?);
+        }
         self.lang.get_command(program_path, &self.bin)
     }
 }
