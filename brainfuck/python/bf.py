@@ -1,5 +1,8 @@
-import os
 import sys
+
+if sys.playform == "win32":
+    import os, msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
 class Program():
     def __init__(self, source):
