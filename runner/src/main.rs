@@ -39,9 +39,7 @@ impl LangType {
                 com.arg(program_path.join(bin));
                 com
             }
-            LangType::Rust => {
-                Command::new(program_path.join("target").join("release").join(bin))
-            }
+            LangType::Rust => Command::new(program_path.join("target").join("release").join(bin)),
         }
     }
 }
@@ -65,11 +63,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn compile(
-        &self,
-        target_path: &str,
-        ret: &mut Vec<Child>,
-    ) -> anyhow::Result<()> {
+    pub fn compile(&self, target_path: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
         let program_path = Path::new(target_path).join(&self.path);
         println!(
             "Compile {}({}) from {}",
@@ -164,8 +158,7 @@ impl Bench {
             const BENCH_COUNT: u32 = 5;
 
             for _ in 0..BENCH_COUNT {
-                let mut command = program
-                    .get_command(target_path);
+                let mut command = program.get_command(target_path);
                 command
                     .current_dir(target_path)
                     .args(&args)
