@@ -123,7 +123,7 @@ impl Program {
                         implementation
                     ),
                     _ => panic!(
-                        "Error occurred while compiling source using {}. {:?}",
+                        "Error occurred while compiling source using {}. {}",
                         implementation, e
                     ),
                 },
@@ -168,7 +168,7 @@ impl Program {
                             implementation
                         ),
                         _ => panic!(
-                            "Error occurred while running command using {}. {:?}",
+                            "Error occurred while running command using {}. {}",
                             implementation, e
                         ),
                     },
