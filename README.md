@@ -16,34 +16,34 @@ Start compile bench BrainFuck...
     Finished release [optimized] target(s) in 0.00s
 Compile BrainFuck done!
 Start BrainFuck...
-Benchmark Simple C++(C++[gcc]) elapsed: 0.078834506s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.078733926s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.078931217s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.079316907s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.078893096s
-Benchmark Simple C++(C++[gcc]) done! average: 0.07894193s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067374842s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067518813s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067438592s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067676503s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067513422s
-Benchmark Idiomatic Rust(Rust[rustc]) done! average: 0.067504434s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.822494324s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.889046445s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.892147049s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.841323857s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.815313675s
-Benchmark JavaScript Implementation(JavaScript[node]) done! average: 0.85206507s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.341308277s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.33608888s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.338634223s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.33559189s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.350162707s
-Benchmark Simple Python(Python[pypy]) done! average: 0.340357195s
-Benchmark Simple Python(Python[python]) elapsed: 6.974152853s
-Benchmark Simple Python(Python[python]) elapsed: 6.856582299s
-Benchmark Simple Python(Python[python]) elapsed: 6.797042696s
-Benchmark Simple Python(Python[python]) elapsed: 7.097980483s
-Benchmark Simple Python(Python[python]) elapsed: 6.800355741s
-Benchmark Simple Python(Python[python]) done! average: 6.905222814s
+Benchmark Simple C++(C++[gcc]) elapsed: 0.064105349s
+Benchmark Simple C++(C++[gcc]) elapsed: 0.063968628s
+Benchmark Simple C++(C++[gcc]) elapsed: 0.064016828s
+Benchmark Simple C++(C++[gcc]) elapsed: 0.063770248s
+Benchmark Simple C++(C++[gcc]) elapsed: 0.063762208s
+Benchmark Simple C++(C++[gcc]) done! average: 0.063924652s
+Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067341922s
+Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067497752s
+Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067864763s
+Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067325082s
+Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067392833s
+Benchmark Idiomatic Rust(Rust[rustc]) done! average: 0.06748447s
+Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.887617023s
+Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.757905745s
+Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.760841079s
+Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.796391932s
+Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.82760022s
+Benchmark JavaScript Implementation(JavaScript[node]) done! average: 0.806071199s
+Benchmark Simple Python(Python[pypy]) elapsed: 0.343001929s
+Benchmark Simple Python(Python[pypy]) elapsed: 0.337090302s
+Benchmark Simple Python(Python[pypy]) elapsed: 0.325513337s
+Benchmark Simple Python(Python[pypy]) elapsed: 0.32790132s
+Benchmark Simple Python(Python[pypy]) elapsed: 0.337721472s
+Benchmark Simple Python(Python[pypy]) done! average: 0.334245672s
+Benchmark Simple Python(Python[python]) elapsed: 6.80762358s
+Benchmark Simple Python(Python[python]) elapsed: 7.016276094s
+Benchmark Simple Python(Python[python]) elapsed: 6.869123954s
+Benchmark Simple Python(Python[python]) elapsed: 7.046543021s
+Benchmark Simple Python(Python[python]) elapsed: 6.826493952s
+Benchmark Simple Python(Python[python]) done! average: 6.91321212s
 ```
