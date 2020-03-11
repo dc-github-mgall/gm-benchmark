@@ -2,5 +2,5 @@
 
 cd runner
 
-cargo run --release -- -b ../build -t ../brainfuck
+cargo run --release -- -b ../build -t ../brainfuck -c 20
 

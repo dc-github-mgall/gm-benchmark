@@ -149,9 +149,7 @@ impl Program {
             );
             let mut sum = Duration::new(0, 0);
 
-            const BENCH_COUNT: u32 = 5;
-
-            for _ in 0..BENCH_COUNT {
+            for i in 0..opt.bench_iter_count {
                 let mut command = self
                     .lang
                     .bench_command(opt, &program_path, implementation)?;
@@ -179,19 +177,23 @@ impl Program {
 
                 assert!(output.status.success());
 
-                println!(
-                    "Benchmark {}[{}] elapsed: {}s",
-                    self.lang,
-                    impl_color,
-                    Color::Yellow.paint(elapsed.as_secs_f64().to_string())
-                );
+                if i % 5 == 0 {
+                    println!(
+                        "Benchmark {}[{}] {}/{} elapsed: {}s",
+                        self.lang,
+                        impl_color,
+                        i,
+                        opt.bench_iter_count,
+                        Color::Yellow.paint(elapsed.as_secs_f64().to_string())
+                    );
+                }
 
                 sum += elapsed;
 
                 assert_eq!(expect_stdout, output.stdout.as_slice());
             }
 
-            let average = sum / BENCH_COUNT;
+            let average = sum / opt.bench_iter_count;
 
             println!(
                 "Benchmark {}[{}] done! average: {}s",
@@ -280,6 +282,8 @@ pub struct Opt {
     build_output: PathBuf,
     #[structopt(short = "t", about = "Path where bench.yml exists")]
     target: PathBuf,
+    #[structopt(short = "c", about = "How many bench iterate", default_value = "10")]
+    bench_iter_count: u32,
 }
 
 fn main() -> anyhow::Result<()> {
