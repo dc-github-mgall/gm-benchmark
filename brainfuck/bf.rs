@@ -42,7 +42,7 @@ impl<R: Read, W: Write> Program<R, W> {
         }
     }
 
-    pub fn run(&mut self) -> anyhow::Result<()> {
+    pub fn run(&mut self) {
         let mut pc = 0;
         let mut ptr = 0;
         let mut tape = vec![0; 8096];
@@ -64,10 +64,10 @@ impl<R: Read, W: Write> Program<R, W> {
                     tape[ptr] -= 1;
                 }
                 b'.' => {
-                    self.out.write(&[tape[ptr]])?;
+                    self.out.write(&[tape[ptr]]).unwrap();
                 }
                 b',' => {
-                    tape[ptr] = self.input.next().unwrap()?;
+                    tape[ptr] = self.input.next().unwrap().unwrap();
                 }
                 b'[' => {
                     if tape[ptr] == 0 {
@@ -84,12 +84,10 @@ impl<R: Read, W: Write> Program<R, W> {
 
             pc += 1;
         }
-
-        Ok(())
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     let stdin = io::stdin();
     let stdin = stdin.lock();
     let mut stdin = BufReader::with_capacity(8196, stdin);
@@ -97,11 +95,11 @@ fn main() -> anyhow::Result<()> {
     let stdout = stdout.lock();
     let mut stdout = BufWriter::with_capacity(8196, stdout);
 
-    let source_length = env::args().skip(1).next().unwrap().parse()?;
+    let source_length = env::args().nth(1).unwrap().parse().unwrap();
     let mut source = vec![0u8; source_length];
-    stdin.read(&mut source)?;
+    stdin.read(&mut source).unwrap();
 
     let mut program = Program::new(&source, &mut stdin, &mut stdout);
 
-    program.run()
+    program.run();
 }
