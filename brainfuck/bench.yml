@@ -13,7 +13,8 @@ programs:
 
     - lang: Cpp
       impl:
-          - gcc
+          - g++
+          - clang++
       idiomatic: true
       path: bf.cc
 
