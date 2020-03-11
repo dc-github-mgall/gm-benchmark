@@ -9,8 +9,8 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
-#[serde(rename_all = "kebab-case")]
 pub enum LangType {
+    Cpp,
     JavaScript,
     Python,
     Rust,
@@ -22,6 +22,7 @@ impl LangType {
         program_path: &PathBuf,
         implementation: &str,
         ret: &mut Vec<Child>,
+        bin: &str,
     ) -> anyhow::Result<()> {
         match self {
             LangType::Rust => match implementation {
@@ -34,8 +35,23 @@ impl LangType {
                             .spawn()?,
                     );
                 }
-                other => panic!("Unknown implementation: {}", other),
+                _ => {}
             },
+            LangType::Cpp => match implementation {
+                "gcc" => {
+                    ret.push(
+                        Command::new("g++")
+                        .current_dir(&program_path)
+                        .arg("-o")
+                        .arg(bin)
+                        .arg("-march=native")
+                        .arg("-O3")
+                        .arg(format!("{}.cc", bin))
+                        .spawn()?,
+                            );
+                }
+                _ => {}
+            }
             LangType::JavaScript => {}
             LangType::Python => {}
         }
@@ -62,6 +78,7 @@ impl LangType {
                 com.arg(program_path.join(bin));
                 com
             }
+            LangType::Cpp => Command::new(program_path.join(bin)),
             LangType::Rust => Command::new(program_path.join("target").join("release").join(bin)),
         }
     }
@@ -72,6 +89,7 @@ impl fmt::Display for LangType {
         match self {
             LangType::JavaScript => write!(f, "{}", Color::Green.paint("JavaScript")),
             LangType::Python => write!(f, "{}", Color::Blue.paint("Python")),
+            LangType::Cpp => write!(f, "{}", Color::Blue.paint("C++")),
             LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
         }
     }
@@ -93,7 +111,7 @@ impl Program {
         let program_path = Path::new(target_path).join(&self.path);
 
         for implementation in &self.implementations {
-            self.lang.compile(&program_path, implementation, ret)?;
+            self.lang.compile(&program_path, implementation, ret, &self.bin)?;
         }
 
         Ok(())
