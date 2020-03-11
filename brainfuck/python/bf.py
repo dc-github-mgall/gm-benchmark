@@ -29,22 +29,24 @@ class Program():
             char = self.code[pc]
             if char == '+':
                 tape[ptr] += 1
-            elif char == '-' and tape[ptr] > 0:
+            elif char == '-':
                 tape[ptr] -= 1
             elif char == '>':
                 ptr += 1
                 if len(tape) == ptr:
                     tape.append(0)
-            elif char == '<' and ptr > 0:
+            elif char == '<':
                 ptr -= 1
             elif char == ',':
                 tape[ptr] = sys.stdin.read(1)
             elif char == '.':
                 sys.stdout.write(chr(tape[ptr]))
-            elif char == '[' and tape[ptr] == 0:
-                pc = self.bracket_map[pc]
-            elif char == ']' and tape[ptr] != 0:
-                pc = self.bracket_map[pc]
+            elif char == '[':
+                if tape[ptr] == 0:
+                    pc = self.bracket_map[pc]
+            elif char == ']':
+                if tape[ptr] != 0:
+                    pc = self.bracket_map[pc]
             pc += 1
 
 length = int(sys.argv[1])
