@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt;
 use std::fs;
+use std::io::ErrorKind;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -23,7 +24,7 @@ impl LangType {
         implementation: &str,
         ret: &mut Vec<Child>,
         bin: &str,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), std::io::Error> {
         match self {
             LangType::Rust => match implementation {
                 "rustc" => {
@@ -41,17 +42,17 @@ impl LangType {
                 "gcc" => {
                     ret.push(
                         Command::new("g++")
-                        .current_dir(&program_path)
-                        .arg("-o")
-                        .arg(bin)
-                        .arg("-march=native")
-                        .arg("-O3")
-                        .arg(format!("{}.cc", bin))
-                        .spawn()?,
-                            );
+                            .current_dir(&program_path)
+                            .arg("-o")
+                            .arg(bin)
+                            .arg("-march=native")
+                            .arg("-O3")
+                            .arg(format!("{}.cc", bin))
+                            .spawn()?,
+                    );
                 }
                 _ => {}
-            }
+            },
             LangType::JavaScript => {}
             LangType::Python => {}
         }
@@ -87,9 +88,9 @@ impl LangType {
 impl fmt::Display for LangType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LangType::JavaScript => write!(f, "{}", Color::Green.paint("JavaScript")),
+            LangType::JavaScript => write!(f, "{}", Color::Yellow.paint("JavaScript")),
             LangType::Python => write!(f, "{}", Color::Blue.paint("Python")),
-            LangType::Cpp => write!(f, "{}", Color::Blue.paint("C++")),
+            LangType::Cpp => write!(f, "{}", Color::Cyan.paint("C++")),
             LangType::Rust => write!(f, "{}", Color::Red.paint("Rust")),
         }
     }
@@ -111,7 +112,22 @@ impl Program {
         let program_path = Path::new(target_path).join(&self.path);
 
         for implementation in &self.implementations {
-            self.lang.compile(&program_path, implementation, ret, &self.bin)?;
+            match self
+                .lang
+                .compile(&program_path, implementation, ret, &self.bin)
+            {
+                Ok(_) => continue,
+                Err(e) => match e.kind() {
+                    ErrorKind::NotFound => panic!(
+                        "Couldn't find {0} from system. Is {0} properly installed?",
+                        implementation
+                    ),
+                    _ => panic!(
+                        "Error occurred while compiling source using {}. {}",
+                        implementation, e
+                    ),
+                },
+            }
         }
 
         Ok(())
@@ -144,7 +160,19 @@ impl Program {
                     .stderr(Stdio::inherit());
 
                 let start = Instant::now();
-                let mut bench_process = command.spawn()?;
+                let mut bench_process = match command.spawn() {
+                    Ok(process) => process,
+                    Err(e) => match e.kind() {
+                        ErrorKind::NotFound => panic!(
+                            "Couldn't find {0} from system. Is {0} properly installed?",
+                            implementation
+                        ),
+                        _ => panic!(
+                            "Error occurred while running command using {}. {}",
+                            implementation, e
+                        ),
+                    },
+                };
 
                 bench_process
                     .stdin
