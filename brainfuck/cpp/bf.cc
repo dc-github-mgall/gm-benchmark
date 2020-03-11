@@ -1,0 +1,126 @@
+#include <iostream>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <stack>
+#include <map>
+
+#include <unistd.h>
+
+using namespace std;
+
+class Program
+{
+    string code;
+    map<size_t, size_t> bracket_map;
+
+public:
+    Program(const string &source)
+    {
+        this->code.reserve(source.size());
+
+        stack<size_t> stack;
+
+        for (char ch : source)
+        {
+            if (ch == '[')
+            {
+                stack.push(this->code.size());
+            }
+            else if (ch == ']')
+            {
+                size_t left = stack.top();
+                stack.pop();
+                size_t right = this->code.size();
+                this->bracket_map[left] = right;
+                this->bracket_map[right] = left;
+            }
+            else
+            {
+                if (ch != '<' && ch != '>' && ch != '+' && ch != '-' && ch != ',' && ch != '.')
+                {
+                    continue;
+                }
+            }
+
+            this->code.push_back(ch);
+        }
+    }
+
+    void run()
+    {
+        vector<unsigned char> tape{0};
+        tape.reserve(8196);
+
+        size_t pc = 0;
+        size_t ptr = 0;
+
+        size_t end = this->code.size();
+
+        while (pc < end)
+        {
+            char ch = this->code[pc];
+            if (ch == '+')
+            {
+                tape[ptr] += 1;
+            }
+            else if (ch == '-' && tape[ptr] > 0)
+            {
+                tape[ptr] -= 1;
+            }
+            else if (ch == '>')
+            {
+                ptr += 1;
+                if (tape.size() == ptr)
+                {
+                    tape.push_back(0);
+                }
+            }
+            else if (ch == '<' && ptr > 0)
+            {
+                ptr -= 1;
+            }
+            else if (ch == ',')
+            {
+                tape[ptr] = getchar();
+            }
+            else if (ch == '.')
+            {
+                printf("%c", tape[ptr]);
+            }
+            else if (ch == '[' && tape[ptr] == 0)
+            {
+                pc = this->bracket_map[pc];
+            }
+            else if (ch == ']' && tape[ptr] != 0)
+            {
+                pc = this->bracket_map[pc];
+            }
+            pc += 1;
+        }
+    }
+};
+
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        return -1;
+    }
+
+    string source;
+    size_t length = atoi(argv[1]);
+    source.resize(length);
+
+    size_t read_length = read(STDIN_FILENO, &source[0], length);
+
+    if (read_length < length) {
+        return -2;
+    }
+
+    Program program(source);
+
+    program.run();
+
+    return 0;
+}
