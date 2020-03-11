@@ -5,7 +5,7 @@ use std::fmt;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 use structopt::StructOpt;
 
@@ -30,10 +30,10 @@ impl LangType {
         opt: &Opt,
         program_path: &Path,
         implementation: &str,
-    ) -> anyhow::Result<Option<Child>> {
-        match self {
+    ) -> anyhow::Result<()> {
+        let command = match self {
             LangType::Rust => match implementation {
-                "rustc" => Ok(Some(
+                "rustc" => Some(
                     Command::new("rustc")
                         .current_dir(&opt.build_output)
                         .stderr(Stdio::inherit())
@@ -41,13 +41,13 @@ impl LangType {
                         .arg("-Copt-level=2")
                         .arg(program_path)
                         .spawn()?,
-                )),
+                ),
 
                 other => return unknown_impl(other),
             },
             LangType::Cpp => match implementation {
-                "gcc" => Ok(Some(
-                    Command::new("g++")
+                "g++" | "clang++" => Some(
+                    Command::new(implementation)
                         .current_dir(&opt.build_output)
                         .stderr(Stdio::inherit())
                         .arg("-o")
@@ -56,12 +56,20 @@ impl LangType {
                         .arg("-O3")
                         .arg(program_path)
                         .spawn()?,
-                )),
-
+                ),
                 other => return unknown_impl(other),
             },
-            LangType::JavaScript | LangType::Python => Ok(None),
+            LangType::JavaScript | LangType::Python => None,
+        };
+
+        if let Some(mut command) = command {
+            let status = command
+                .wait()
+                .with_context(|| format!("Failed to compile with {}", implementation))?;
+            assert!(status.success(), "Compile process failed!");
         }
+
+        Ok(())
     }
 
     pub fn bench_command(
@@ -116,18 +124,6 @@ pub struct Program {
 }
 
 impl Program {
-    fn compile(&self, opt: &Opt, program_path: &Path) -> anyhow::Result<Vec<Child>> {
-        self.implementations
-            .iter()
-            .filter_map(|implementation| {
-                self.lang
-                    .compile(opt, program_path, implementation)
-                    .with_context(|| format!("Compile failed with {}", implementation))
-                    .transpose()
-            })
-            .collect()
-    }
-
     pub fn bench(
         &self,
         opt: &Opt,
@@ -137,17 +133,20 @@ impl Program {
     ) -> anyhow::Result<()> {
         let program_path = opt.target.join(&self.path);
 
-        let compile_processes = self.compile(opt, &program_path)?;
-
-        for mut process in compile_processes {
-            let success = process.wait().with_context(|| "Compile error!")?.success();
-
-            if !success {
-                return Err(anyhow::anyhow!("Compile process failed"));
-            }
-        }
-
         for implementation in &self.implementations {
+            let impl_color = Color::Purple.paint(implementation);
+            println!("Start compile {} with {}", self.lang, impl_color);
+            let compile_start = Instant::now();
+
+            self.lang
+                .compile(opt, &program_path, implementation)
+                .with_context(|| format!("Compile failed with {}", implementation))?;
+
+            println!(
+                "Compile with {} complete! elapsed: {}s",
+                impl_color,
+                Color::Yellow.paint(compile_start.elapsed().as_secs_f64().to_string())
+            );
             let mut sum = Duration::new(0, 0);
 
             const BENCH_COUNT: u32 = 5;
@@ -183,7 +182,7 @@ impl Program {
                 println!(
                     "Benchmark {}[{}] elapsed: {}s",
                     self.lang,
-                    Color::Purple.paint(implementation),
+                    impl_color,
                     Color::Yellow.paint(elapsed.as_secs_f64().to_string())
                 );
 
@@ -197,7 +196,7 @@ impl Program {
             println!(
                 "Benchmark {}[{}] done! average: {}s",
                 self.lang,
-                Color::Purple.paint(implementation),
+                impl_color,
                 Color::Yellow.paint(average.as_secs_f64().to_string()),
             );
         }
