@@ -1,6 +1,6 @@
 use ansi_term::Color;
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fmt;
 use std::fs;
 use std::io::ErrorKind;
@@ -8,6 +8,14 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+use structopt::StructOpt;
+
+pub fn unknown_impl<T>(implementation: &str) -> anyhow::Result<T> {
+    Err(anyhow::anyhow!(
+        "Unknown implementation: {}",
+        implementation
+    ))
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum LangType {
@@ -20,67 +28,70 @@ pub enum LangType {
 impl LangType {
     pub fn compile(
         self,
-        program_path: &PathBuf,
+        opt: &Opt,
+        program_path: &Path,
         implementation: &str,
-        ret: &mut Vec<Child>,
-        bin: &str,
-    ) -> Result<(), std::io::Error> {
+    ) -> anyhow::Result<Option<Child>> {
         match self {
             LangType::Rust => match implementation {
-                "rustc" => {
-                    ret.push(
-                        Command::new("cargo")
-                            .current_dir(&program_path)
-                            .env("RUSTFLAGS", "-Ctarget-cpu=native")
-                            .args(&["build", "--release"])
-                            .spawn()?,
-                    );
-                }
-                _ => {}
+                "rustc" => Ok(Some(
+                    Command::new("rustc")
+                        .current_dir(&opt.build_output)
+                        .stderr(Stdio::inherit())
+                        .arg("-Ctarget-cpu=native")
+                        .arg("-Copt-level=2")
+                        .arg(program_path)
+                        .spawn()?,
+                )),
+
+                other => return unknown_impl(other),
             },
             LangType::Cpp => match implementation {
-                "gcc" => {
-                    ret.push(
-                        Command::new("g++")
-                            .current_dir(&program_path)
-                            .arg("-o")
-                            .arg(bin)
-                            .arg("-march=native")
-                            .arg("-O3")
-                            .arg(format!("{}.cc", bin))
-                            .spawn()?,
-                    );
-                }
-                _ => {}
-            },
-            LangType::JavaScript => {}
-            LangType::Python => {}
-        }
+                "gcc" => Ok(Some(
+                    Command::new("g++")
+                        .current_dir(&opt.build_output)
+                        .stderr(Stdio::inherit())
+                        .arg("-o")
+                        .arg(program_path.file_stem().unwrap())
+                        .arg("-march=native")
+                        .arg("-O3")
+                        .arg(program_path)
+                        .spawn()?,
+                )),
 
-        Ok(())
+                other => return unknown_impl(other),
+            },
+            LangType::JavaScript | LangType::Python => Ok(None),
+        }
     }
 
-    pub fn get_command(self, program_path: &PathBuf, implementation: &str, bin: &str) -> Command {
+    pub fn bench_command(
+        self,
+        opt: &Opt,
+        program_path: &Path,
+        implementation: &str,
+    ) -> anyhow::Result<Command> {
         match self {
             LangType::JavaScript => {
                 let mut com = Command::new(match implementation {
                     "node" => "node",
-                    other => panic!("Unknown implementation: {}", other),
+                    other => return unknown_impl(other),
                 });
-                com.arg(program_path.join(bin));
-                com
+                com.arg(program_path);
+                Ok(com)
             }
             LangType::Python => {
                 let mut com = Command::new(match implementation {
                     "pypy" => "pypy",
                     "python" => "python",
-                    other => panic!("Unknown implementation: {}", other),
+                    other => return unknown_impl(other),
                 });
-                com.arg(program_path.join(bin));
-                com
+                com.arg(program_path);
+                Ok(com)
             }
-            LangType::Cpp => Command::new(program_path.join(bin)),
-            LangType::Rust => Command::new(program_path.join("target").join("release").join(bin)),
+            LangType::Cpp | LangType::Rust => Ok(Command::new(
+                opt.build_output.join(program_path.file_stem().unwrap()),
+            )),
         }
     }
 }
@@ -104,44 +115,42 @@ pub struct Program {
     implementations: Vec<String>,
     idiomatic: bool,
     path: String,
-    bin: String,
 }
 
 impl Program {
-    pub fn compile(&self, target_path: &str, ret: &mut Vec<Child>) -> anyhow::Result<()> {
-        let program_path = Path::new(target_path).join(&self.path);
-
-        for implementation in &self.implementations {
-            match self
-                .lang
-                .compile(&program_path, implementation, ret, &self.bin)
-            {
-                Ok(_) => continue,
-                Err(e) => match e.kind() {
-                    ErrorKind::NotFound => panic!(
-                        "Couldn't find {0} from system. Is {0} properly installed?",
-                        implementation
-                    ),
-                    _ => panic!(
-                        "Error occurred while compiling source using {}. {}",
-                        implementation, e
-                    ),
-                },
-            }
-        }
-
-        Ok(())
+    fn compile(&self, opt: &Opt, program_path: &Path) -> anyhow::Result<Vec<Child>> {
+        self.implementations
+            .iter()
+            .filter_map(|implementation| {
+                self.lang
+                    .compile(opt, program_path, implementation)
+                    .with_context(|| {
+                        format!("Failed to compile {} with {}", self.name, implementation)
+                    })
+                    .transpose()
+            })
+            .collect()
     }
 
     pub fn bench(
         &self,
-        target_path: &str,
+        opt: &Opt,
         args: &[String],
         stdin_content: &[u8],
         expect_stdout: &[u8],
     ) -> anyhow::Result<()> {
-        let program_path = Path::new(target_path).join(&self.path);
+        let program_path = opt.target.join(&self.path);
         let program_name = Color::Green.paint(&self.name);
+
+        let compile_processes = self.compile(opt, &program_path)?;
+
+        for mut process in compile_processes {
+            let success = process.wait().with_context(|| "Compile error!")?.success();
+
+            if !success {
+                return Err(anyhow::anyhow!("Compile process failed"));
+            }
+        }
 
         for implementation in &self.implementations {
             let mut sum = Duration::new(0, 0);
@@ -151,9 +160,9 @@ impl Program {
             for _ in 0..BENCH_COUNT {
                 let mut command = self
                     .lang
-                    .get_command(&program_path, implementation, &self.bin);
+                    .bench_command(opt, &program_path, implementation)?;
                 command
-                    .current_dir(target_path)
+                    .current_dir(&opt.build_output)
                     .args(args)
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
@@ -222,7 +231,7 @@ enum ProgramStdinType {
 }
 
 impl ProgramStdinType {
-    pub fn get_bytes(&self, target_path: &str, content: &str) -> anyhow::Result<Vec<u8>> {
+    pub fn get_bytes(&self, target_path: &Path, content: &str) -> anyhow::Result<Vec<u8>> {
         match self {
             ProgramStdinType::File => Ok(fs::read(Path::new(target_path).join(content))?),
             ProgramStdinType::Text => Ok(content.as_bytes().to_vec()),
@@ -238,7 +247,7 @@ pub struct ProgramStdin {
 }
 
 impl ProgramStdin {
-    pub fn get_bytes(&self, path: &str) -> anyhow::Result<Vec<u8>> {
+    pub fn get_bytes(&self, path: &Path) -> anyhow::Result<Vec<u8>> {
         self.ty.get_bytes(path, &self.content)
     }
 }
@@ -253,20 +262,15 @@ pub struct Bench {
 }
 
 impl Bench {
-    pub fn bench(&self, target_path: &str) -> anyhow::Result<()> {
-        let mut compile_processes = Vec::with_capacity(self.programs.len() * 2);
+    pub fn bench(&self, opt: &Opt) -> anyhow::Result<()> {
         let bench_name = Color::Cyan.paint(&self.name);
 
-        println!("Start compile bench {}...", bench_name);
-
-        for program in self.programs.iter() {
-            program.compile(target_path, &mut compile_processes)?;
-        }
+        println!("Start {}...", bench_name);
 
         let stdin_content: Vec<u8> = self
             .stdin
             .as_ref()
-            .map(|stdin| stdin.get_bytes(target_path))
+            .map(|stdin| stdin.get_bytes(&opt.target))
             .transpose()?
             .unwrap_or_default();
 
@@ -279,27 +283,33 @@ impl Bench {
             })
             .collect();
 
-        for process in compile_processes.iter_mut() {
-            let status = process.wait()?;
-            assert!(status.success());
-        }
-
-        println!("Compile {} done!", bench_name);
-        println!("Start {}...", bench_name);
-
         for program in self.programs.iter() {
-            program.bench(target_path, &args, &stdin_content, self.stdout.as_bytes())?;
+            program.bench(opt, &args, &stdin_content, self.stdout.as_bytes())?;
         }
 
         Ok(())
     }
 }
 
+#[derive(StructOpt)]
+#[structopt(name = "gm_benchmark_runner", about = "Benchmark Runner")]
+pub struct Opt {
+    #[structopt(short = "b", about = "Path for store build output")]
+    build_output: PathBuf,
+    #[structopt(short = "t", about = "Path where bench.yml exists")]
+    target: PathBuf,
+}
+
 fn main() -> anyhow::Result<()> {
-    let target_dir = env::args().skip(1).next().unwrap();
+    let opt = Opt::from_args();
 
-    let bench: Bench =
-        serde_yaml::from_reader(fs::File::open(Path::new(&target_dir).join("bench.yml"))?)?;
+    if !opt.build_output.exists() {
+        std::fs::create_dir_all(&opt.build_output)?;
+    }
 
-    bench.bench(&target_dir)
+    let bench: Bench = serde_yaml::from_reader(fs::File::open(opt.target.join("bench.yml"))?)?;
+
+    bench
+        .bench(&opt)
+        .with_context(|| format!("Failed to benchmark {}", bench.name))
 }
