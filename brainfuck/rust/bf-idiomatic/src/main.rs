@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
 use std::env;
 use std::io::{self, BufReader, BufWriter, Bytes, Read, Write};
+use std::iter;
 
 struct Program<R: Read, W: Write> {
     source: Vec<u8>,
-    bracket_pair: BTreeMap<usize, usize>,
+    bracket_pc: Vec<usize>,
     out: W,
     input: Bytes<R>,
 }
@@ -12,14 +12,12 @@ struct Program<R: Read, W: Write> {
 impl<R: Read, W: Write> Program<R, W> {
     pub fn new(source: &[u8], input: R, out: W) -> Self {
         let mut bf_source = Vec::with_capacity(source.len());
-        let mut pairs = BTreeMap::new();
-        let mut stack = Vec::new();
+        let mut bracket_pc: Vec<usize> = iter::repeat(0).take(source.len()).collect();
+        let mut stack = Vec::with_capacity(10);
 
         for s in source.iter() {
             match s {
-                b'>' | b'<' | b'+' | b'-' | b',' | b'.' => {
-                    bf_source.push(*s);
-                }
+                b'>' | b'<' | b'+' | b'-' | b',' | b'.' => {}
                 b'[' => {
                     stack.push(bf_source.len());
                     bf_source.push(*s);
@@ -28,68 +26,20 @@ impl<R: Read, W: Write> Program<R, W> {
                     let left = stack.pop().unwrap();
                     let right = bf_source.len();
                     bf_source.push(*s);
-                    pairs.insert(left, right);
-                    pairs.insert(right, left);
+                    bracket_pc[left] = right;
+                    bracket_pc[right] = left;
                 }
-                _ => {}
+                _ => continue,
             }
+            bf_source.push(*s);
         }
 
         Self {
             out,
             input: input.bytes(),
             source: bf_source,
-            bracket_pair: pairs,
+            bracket_pc,
         }
-    }
-
-    fn run_byte(
-        &mut self,
-        pc: &mut usize,
-        ptr: &mut usize,
-        tape: &mut Vec<u8>,
-        byte: u8,
-    ) -> anyhow::Result<()> {
-        match byte {
-            b'>' => {
-                *ptr += 1;
-                if *ptr >= tape.len() {
-                    tape.push(0);
-                }
-            }
-            b'<' => {
-                *ptr -= 1;
-            }
-            b'+' => {
-                tape[*ptr] += 1;
-            }
-            b'-' => {
-                tape[*ptr] -= 1;
-            }
-            b'.' => {
-                self.out.write(&[tape[*ptr]])?;
-            }
-            b',' => {
-                tape[*ptr] = self.input.next().unwrap()?;
-            }
-            b'[' => {
-                if tape[*ptr] == 0 {
-                    *pc = self.bracket_pair[pc];
-                    return Ok(());
-                }
-            }
-            b']' => {
-                if tape[*ptr] != 0 {
-                    *pc = self.bracket_pair[pc];
-                    return Ok(());
-                }
-            }
-            _ => {}
-        }
-
-        *pc += 1;
-
-        Ok(())
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
@@ -97,7 +47,42 @@ impl<R: Read, W: Write> Program<R, W> {
         let mut ptr = 0;
         let mut tape = vec![0; 8096];
         while let Some(byte) = self.source.get(pc).copied() {
-            self.run_byte(&mut pc, &mut ptr, &mut tape, byte)?;
+            match byte {
+                b'>' => {
+                    ptr += 1;
+                    if ptr >= tape.len() {
+                        tape.push(0);
+                    }
+                }
+                b'<' => {
+                    ptr -= 1;
+                }
+                b'+' => {
+                    tape[ptr] += 1;
+                }
+                b'-' => {
+                    tape[ptr] -= 1;
+                }
+                b'.' => {
+                    self.out.write(&[tape[ptr]])?;
+                }
+                b',' => {
+                    tape[ptr] = self.input.next().unwrap()?;
+                }
+                b'[' => {
+                    if tape[ptr] == 0 {
+                        pc = self.bracket_pc[pc];
+                    }
+                }
+                b']' => {
+                    if tape[ptr] != 0 {
+                        pc = self.bracket_pc[pc];
+                    }
+                }
+                _ => {}
+            }
+
+            pc += 1;
         }
 
         Ok(())
@@ -118,9 +103,5 @@ fn main() -> anyhow::Result<()> {
 
     let mut program = Program::new(&source, &mut stdin, &mut stdout);
 
-    program.run()?;
-
-    stdout.flush()?;
-
-    Ok(())
+    program.run()
 }

@@ -1,5 +1,10 @@
 # gm-benchmark
 
+## Requirements
+
+* Unix-like OS
+* gcc, pypy, python, nodejs, cargo, rustc
+
 ## Results
 
 ```
