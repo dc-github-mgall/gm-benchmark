@@ -1,4 +1,3 @@
-#include <iostream>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -64,7 +63,7 @@ public:
             {
                 tape[ptr] += 1;
             }
-            else if (ch == '-' && tape[ptr] > 0)
+            else if (ch == '-')
             {
                 tape[ptr] -= 1;
             }
@@ -76,7 +75,7 @@ public:
                     tape.push_back(0);
                 }
             }
-            else if (ch == '<' && ptr > 0)
+            else if (ch == '<')
             {
                 ptr -= 1;
             }
@@ -114,7 +113,8 @@ int main(int argc, char *argv[])
 
     size_t read_length = read(STDIN_FILENO, &source[0], length);
 
-    if (read_length < length) {
+    if (read_length < length)
+    {
         return -2;
     }
 

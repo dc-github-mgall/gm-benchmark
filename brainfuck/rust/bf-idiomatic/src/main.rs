@@ -58,7 +58,7 @@ impl<R: Read, W: Write> Program<R, W> {
                 }
             }
             b'<' => {
-                *ptr = ptr.saturating_sub(1);
+                *ptr -= 1;
             }
             b'+' => {
                 tape[*ptr] += 1;
