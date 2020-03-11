@@ -3,7 +3,6 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
-use std::io::ErrorKind;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -110,7 +109,6 @@ impl fmt::Display for LangType {
 #[derive(Serialize, Deserialize)]
 pub struct Program {
     lang: LangType,
-    name: String,
     #[serde(rename = "impl")]
     implementations: Vec<String>,
     idiomatic: bool,
@@ -124,9 +122,7 @@ impl Program {
             .filter_map(|implementation| {
                 self.lang
                     .compile(opt, program_path, implementation)
-                    .with_context(|| {
-                        format!("Failed to compile {} with {}", self.name, implementation)
-                    })
+                    .with_context(|| format!("Compile failed with {}", implementation))
                     .transpose()
             })
             .collect()
@@ -140,7 +136,6 @@ impl Program {
         expect_stdout: &[u8],
     ) -> anyhow::Result<()> {
         let program_path = opt.target.join(&self.path);
-        let program_name = Color::Green.paint(&self.name);
 
         let compile_processes = self.compile(opt, &program_path)?;
 
@@ -169,19 +164,9 @@ impl Program {
                     .stderr(Stdio::inherit());
 
                 let start = Instant::now();
-                let mut bench_process = match command.spawn() {
-                    Ok(process) => process,
-                    Err(e) => match e.kind() {
-                        ErrorKind::NotFound => panic!(
-                            "Couldn't find {0} from system. Is {0} properly installed?",
-                            implementation
-                        ),
-                        _ => panic!(
-                            "Error occurred while running command using {}. {}",
-                            implementation, e
-                        ),
-                    },
-                };
+                let mut bench_process = command
+                    .spawn()
+                    .with_context(|| format!("Benchmark command failed with {}", implementation))?;
 
                 bench_process
                     .stdin
@@ -196,8 +181,7 @@ impl Program {
                 assert!(output.status.success());
 
                 println!(
-                    "Benchmark {}({}[{}]) elapsed: {}s",
-                    program_name,
+                    "Benchmark {}[{}] elapsed: {}s",
                     self.lang,
                     Color::Purple.paint(implementation),
                     Color::Yellow.paint(elapsed.as_secs_f64().to_string())
@@ -211,8 +195,7 @@ impl Program {
             let average = sum / BENCH_COUNT;
 
             println!(
-                "Benchmark {}({}[{}]) done! average: {}s",
-                program_name,
+                "Benchmark {}[{}] done! average: {}s",
                 self.lang,
                 Color::Purple.paint(implementation),
                 Color::Yellow.paint(average.as_secs_f64().to_string()),

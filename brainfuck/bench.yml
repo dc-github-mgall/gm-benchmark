@@ -14,21 +14,18 @@ programs:
     - lang: Cpp
       impl:
           - gcc
-      name: Simple C++
       idiomatic: true
       path: bf.cc
 
     - lang: Rust
       impl:
           - rustc
-      name: Idiomatic Rust
       idiomatic: true
       path: bf.rs
 
     - lang: JavaScript
       impl:
           - node
-      name: JavaScript Implementation
       idiomatic: true
       path: bf.js
 
@@ -36,6 +33,5 @@ programs:
       impl:
           - pypy
             #- python
-      name: Simple Python
       idiomatic: true
       path: bf.py
