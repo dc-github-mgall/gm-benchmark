@@ -3,7 +3,7 @@ process.stdin.setEncoding('utf8')
 
 let f = source => {
   let code = ''
-  let bracket_map = {}
+  let bracket_pc = new Array(source.length).fill(0)
   let stack = []
 
   let split = source.split('')
@@ -17,8 +17,8 @@ let f = source => {
       let left = stack.pop()
       let right = code.length
 
-      bracket_map[left] = right
-      bracket_map[right] = left
+      bracket_pc[left] = right
+      bracket_pc[right] = left
     } else if (!['<', '>', '+', '-', ',', '.'].filter(v => v == char).length) {
       continue
     }
@@ -48,9 +48,9 @@ let f = source => {
     } else if (char == '.') {
       process.stdout.write(String.fromCharCode(tape[ptr]))
     } else if (char == '[' && tape[ptr] == 0) {
-      pc = bracket_map[pc]
+      pc = bracket_pc[pc]
     } else if (char == ']' && tape[ptr] != 0) {
-      pc = bracket_map[pc]
+      pc = bracket_pc[pc]
     }
 
     pc += 1

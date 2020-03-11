@@ -11,12 +11,13 @@ using namespace std;
 class Program
 {
     string code;
-    map<size_t, size_t> bracket_map;
+    vector<size_t> bracket_pc;
 
 public:
     Program(const string &source)
     {
         this->code.reserve(source.size());
+        this->bracket_pc.resize(source.size(), 0);
 
         stack<size_t> stack;
 
@@ -31,8 +32,8 @@ public:
                 size_t left = stack.top();
                 stack.pop();
                 size_t right = this->code.size();
-                this->bracket_map[left] = right;
-                this->bracket_map[right] = left;
+                this->bracket_pc[left] = right;
+                this->bracket_pc[right] = left;
             }
             else
             {
@@ -89,11 +90,11 @@ public:
             }
             else if (ch == '[' && tape[ptr] == 0)
             {
-                pc = this->bracket_map[pc];
+                pc = this->bracket_pc[pc];
             }
             else if (ch == ']' && tape[ptr] != 0)
             {
-                pc = this->bracket_map[pc];
+                pc = this->bracket_pc[pc];
             }
             pc += 1;
         }
