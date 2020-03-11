@@ -8,42 +8,34 @@
 ## Results
 
 ```
-gm-benchmark on  master [!]
+gm-benchmark on  master
 ❯ ./bench.sh
-    Finished release [optimized] target(s) in 0.01s
-     Running `target/release/gm-benchmark-runner ../brainfuck`
-Start compile bench BrainFuck...
-    Finished release [optimized] target(s) in 0.00s
-Compile BrainFuck done!
+   Compiling gm-benchmark-runner v0.1.0 (/home/riey/repos/gm-benchmark/runner)
+    Finished release [optimized] target(s) in 2.32s
+     Running `target/release/gm-benchmark-runner -b ../build -t ../brainfuck`
 Start BrainFuck...
-Benchmark Simple C++(C++[gcc]) elapsed: 0.064105349s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.063968628s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.064016828s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.063770248s
-Benchmark Simple C++(C++[gcc]) elapsed: 0.063762208s
-Benchmark Simple C++(C++[gcc]) done! average: 0.063924652s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067341922s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067497752s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067864763s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067325082s
-Benchmark Idiomatic Rust(Rust[rustc]) elapsed: 0.067392833s
-Benchmark Idiomatic Rust(Rust[rustc]) done! average: 0.06748447s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.887617023s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.757905745s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.760841079s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.796391932s
-Benchmark JavaScript Implementation(JavaScript[node]) elapsed: 0.82760022s
-Benchmark JavaScript Implementation(JavaScript[node]) done! average: 0.806071199s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.343001929s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.337090302s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.325513337s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.32790132s
-Benchmark Simple Python(Python[pypy]) elapsed: 0.337721472s
-Benchmark Simple Python(Python[pypy]) done! average: 0.334245672s
-Benchmark Simple Python(Python[python]) elapsed: 6.80762358s
-Benchmark Simple Python(Python[python]) elapsed: 7.016276094s
-Benchmark Simple Python(Python[python]) elapsed: 6.869123954s
-Benchmark Simple Python(Python[python]) elapsed: 7.046543021s
-Benchmark Simple Python(Python[python]) elapsed: 6.826493952s
-Benchmark Simple Python(Python[python]) done! average: 6.91321212s
+Benchmark C++[gcc] elapsed: 0.063901528s
+Benchmark C++[gcc] elapsed: 0.063957348s
+Benchmark C++[gcc] elapsed: 0.063740138s
+Benchmark C++[gcc] elapsed: 0.063688488s
+Benchmark C++[gcc] elapsed: 0.064069808s
+Benchmark C++[gcc] done! average: 0.063871462s
+Benchmark Rust[rustc] elapsed: 0.068082133s
+Benchmark Rust[rustc] elapsed: 0.067884513s
+Benchmark Rust[rustc] elapsed: 0.067707642s
+Benchmark Rust[rustc] elapsed: 0.067583512s
+Benchmark Rust[rustc] elapsed: 0.067681823s
+Benchmark Rust[rustc] done! average: 0.067787924s
+Benchmark JavaScript[node] elapsed: 0.840754547s
+Benchmark JavaScript[node] elapsed: 0.765493274s
+Benchmark JavaScript[node] elapsed: 0.755845372s
+Benchmark JavaScript[node] elapsed: 0.756327594s
+Benchmark JavaScript[node] elapsed: 0.756336613s
+Benchmark JavaScript[node] done! average: 0.77495148s
+Benchmark Python[pypy] elapsed: 0.351760779s
+Benchmark Python[pypy] elapsed: 0.33596478s
+Benchmark Python[pypy] elapsed: 0.337378942s
+Benchmark Python[pypy] elapsed: 0.336640391s
+Benchmark Python[pypy] elapsed: 0.325316407s
+Benchmark Python[pypy] done! average: 0.337412259s
 ```
