@@ -1,8 +1,10 @@
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <stack>
 #include <map>
+#include <fstream>
 
 #include <unistd.h>
 
@@ -37,7 +39,7 @@ public:
             }
             else
             {
-                if (ch != '<' && ch != '>' && ch != '+' && ch != '-' && ch != ',' && ch != '.')
+                if (ch != '<' && ch != '>' && ch != '+' && ch != '-' && ch != '.')
                 {
                     continue;
                 }
@@ -80,13 +82,10 @@ public:
             {
                 ptr -= 1;
             }
-            else if (ch == ',')
-            {
-                tape[ptr] = getchar();
-            }
             else if (ch == '.')
             {
-                printf("%c", tape[ptr]);
+                putchar(tape[ptr]);
+                // printf("%c", tape[ptr]);
             }
             else if (ch == '[' && tape[ptr] == 0)
             {
@@ -103,21 +102,20 @@ public:
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-    {
+    std::ifstream source_file(getenv("GM_BF_FILE"));
+
+    if (!source_file.is_open()) {
         return -1;
     }
 
+    source_file.seekg(0, std::ios::end);
+
     string source;
-    size_t length = atoi(argv[1]);
-    source.resize(length);
 
-    size_t read_length = read(STDIN_FILENO, &source[0], length);
-
-    if (read_length < length)
-    {
-        return -2;
-    }
+    size_t size = source_file.tellg();
+    source.resize(size);
+    source_file.seekg(0);
+    source_file.read(&source[0], size);
 
     Program program(source);
 

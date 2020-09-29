@@ -1,6 +1,4 @@
 #!/bin/bash
 
-cd runner
-
-cargo run --release -- -b ../build -t ../brainfuck -c 20
+cargo run --release -- -b $PWD/build -t $PWD/brainfuck
 

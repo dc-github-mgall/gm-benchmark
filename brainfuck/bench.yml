@@ -1,11 +1,7 @@
 name: BrainFuck
 
-args:
-    - $CONTENT_LENGTH$
-
-stdin:
-    type: file
-    content: bench.bf
+env:
+  GM_BF_FILE: bench.bf
 
 stdout: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
 
