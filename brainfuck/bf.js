@@ -1,6 +1,3 @@
-length = parseInt(process.argv[2])
-process.stdin.setEncoding('utf8')
-
 let f = source => {
   let code = ''
   let bracket_pc = new Array(source.length).fill(0)
@@ -43,8 +40,6 @@ let f = source => {
     }
     if (char == '<' && ptr > 0) {
       ptr -= 1
-    } else if (char == ',') {
-      tape[ptr] = sys.stdin.read(1)
     } else if (char == '.') {
       process.stdout.write(String.fromCharCode(tape[ptr]))
     } else if (char == '[' && tape[ptr] == 0) {
@@ -57,10 +52,10 @@ let f = source => {
   }
 }
 
-process.stdin.on('readable', () => {
-  var input = process.stdin.read()
+const fs = require("fs");
 
-  if (input !== null) {
-    f(input)
-  }
+fs.readFile(process.env["GM_BF_FILE"], (err, data) => {
+  if (err) throw err
+
+  f(data.toString())
 })

@@ -1,5 +1,5 @@
 [package]
-name = "gm-benchmark-runner"
+name = "gm-benchmark"
 version = "0.1.0"
 authors = ["Riey <creeper844@gmail.com>"]
 edition = "2018"
@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_yaml = "0.8.11"
-serde = { version = "1.0.104", features = ["derive"] }
 ansi_term = "0.12.1"
-structopt = "0.3.11"
-anyhow = "1.0.26"
+anyhow = "1.0.32"
+serde = { version = "1.0.116", features = ["derive"] }
+structopt = "0.3.18"
+serde_yaml = "0.8.13"

@@ -1,4 +1,5 @@
 import sys
+import os
 
 class Program():
     def __init__(self, source):
@@ -14,7 +15,7 @@ class Program():
                 right = len(self.code)
                 self.bracket_map[left] = right
                 self.bracket_map[right] = left
-            elif not char in ('<', '>', '+', '-', ',', '.'):
+            elif not char in ('<', '>', '+', '-', '.'):
                 continue
 
             self.code += char
@@ -37,8 +38,6 @@ class Program():
                     tape.append(0)
             elif char == '<':
                 ptr -= 1
-            elif char == ',':
-                tape[ptr] = sys.stdin.read(1)
             elif char == '.':
                 sys.stdout.write(chr(tape[ptr]))
             elif char == '[':
@@ -49,8 +48,8 @@ class Program():
                     pc = self.bracket_map[pc]
             pc += 1
 
-length = int(sys.argv[1])
-source = sys.stdin.read(length)
-Program(source).run()
+source_file = os.environ["GM_BF_FILE"]
+source = open(source_file, "r")
+Program(source.read()).run()
 sys.stdout.flush()
 

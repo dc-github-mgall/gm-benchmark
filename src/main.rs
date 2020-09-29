@@ -1,12 +1,12 @@
 use ansi_term::Color;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use structopt::StructOpt;
 
 pub fn unknown_impl<T>(implementation: &str) -> anyhow::Result<T> {
@@ -25,6 +25,17 @@ pub enum LangType {
 }
 
 impl LangType {
+    fn binary_name(self, program_path: &Path, implementation: &str) -> String {
+        let stem = program_path.file_stem().unwrap().to_string_lossy();
+
+        match self {
+            LangType::Rust => format!("{}-rs-{}", stem, implementation),
+            LangType::Cpp => format!("{}-cpp-{}", stem, implementation),
+            LangType::Python => format!("{}-python-{}", stem, implementation),
+            LangType::JavaScript => format!("{}-js-{}", stem, implementation),
+        }
+    }
+
     pub fn compile(
         self,
         opt: &Opt,
@@ -39,6 +50,10 @@ impl LangType {
                         .stderr(Stdio::inherit())
                         .arg("-Ctarget-cpu=native")
                         .arg("-Copt-level=2")
+                        .arg(format!(
+                            "-o{}",
+                            self.binary_name(program_path, implementation)
+                        ))
                         .arg(program_path)
                         .spawn()?,
                 ),
@@ -51,7 +66,7 @@ impl LangType {
                         .current_dir(&opt.build_output)
                         .stderr(Stdio::inherit())
                         .arg("-o")
-                        .arg(program_path.file_stem().unwrap())
+                        .arg(self.binary_name(program_path, implementation))
                         .arg("-march=native")
                         .arg("-O3")
                         .arg(program_path)
@@ -72,33 +87,35 @@ impl LangType {
         Ok(())
     }
 
-    pub fn bench_command(
+    pub fn hyperfine_arg(
         self,
         opt: &Opt,
         program_path: &Path,
         implementation: &str,
-    ) -> anyhow::Result<Command> {
+    ) -> anyhow::Result<String> {
         match self {
             LangType::JavaScript => {
-                let mut com = Command::new(match implementation {
+                let runtime = match implementation {
                     "node" => "node",
                     other => return unknown_impl(other),
-                });
-                com.arg(program_path);
-                Ok(com)
+                };
+
+                Ok(format!("{} {}", runtime, program_path.display()))
             }
             LangType::Python => {
-                let mut com = Command::new(match implementation {
+                let runtime = match implementation {
                     "pypy" => "pypy",
                     "python" => "python",
                     other => return unknown_impl(other),
-                });
-                com.arg(program_path);
-                Ok(com)
+                };
+
+                Ok(format!("{} {}", runtime, program_path.display()))
             }
-            LangType::Cpp | LangType::Rust => Ok(Command::new(
-                opt.build_output.join(program_path.file_stem().unwrap()),
-            )),
+            LangType::Rust | LangType::Cpp => Ok(opt
+                .build_output
+                .join(self.binary_name(program_path, implementation))
+                .display()
+                .to_string()),
         }
     }
 }
@@ -124,13 +141,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn bench(
-        &self,
-        opt: &Opt,
-        args: &[String],
-        stdin_content: &[u8],
-        expect_stdout: &[u8],
-    ) -> anyhow::Result<()> {
+    pub fn bench(&self, opt: &Opt, hyperfine_args: &mut Vec<String>) -> anyhow::Result<()> {
         let program_path = opt.target.join(&self.path);
 
         for implementation in &self.implementations {
@@ -147,59 +158,10 @@ impl Program {
                 impl_color,
                 Color::Yellow.paint(compile_start.elapsed().as_secs_f64().to_string())
             );
-            let mut sum = Duration::new(0, 0);
 
-            for i in 0..opt.bench_iter_count {
-                let mut command = self
-                    .lang
-                    .bench_command(opt, &program_path, implementation)?;
-                command
-                    .current_dir(&opt.build_output)
-                    .args(args)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::inherit());
-
-                let start = Instant::now();
-                let mut bench_process = command
-                    .spawn()
-                    .with_context(|| format!("Benchmark command failed with {}", implementation))?;
-
-                bench_process
-                    .stdin
-                    .as_mut()
-                    .unwrap()
-                    .write_all(stdin_content)?;
-
-                let output = bench_process.wait_with_output()?;
-
-                let elapsed = start.elapsed();
-
-                assert!(output.status.success());
-
-                if i % 5 == 0 {
-                    println!(
-                        "Benchmark {}[{}] {}/{} elapsed: {}s",
-                        self.lang,
-                        impl_color,
-                        i,
-                        opt.bench_iter_count,
-                        Color::Yellow.paint(elapsed.as_secs_f64().to_string())
-                    );
-                }
-
-                sum += elapsed;
-
-                assert_eq!(expect_stdout, output.stdout.as_slice());
-            }
-
-            let average = sum / opt.bench_iter_count;
-
-            println!(
-                "Benchmark {}[{}] done! average: {}s",
-                self.lang,
-                impl_color,
-                Color::Yellow.paint(average.as_secs_f64().to_string()),
+            hyperfine_args.push(
+                self.lang
+                    .hyperfine_arg(opt, &program_path, implementation)?,
             );
         }
 
@@ -208,68 +170,34 @@ impl Program {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-enum ProgramStdinType {
-    File,
-    Text,
-}
-
-impl ProgramStdinType {
-    pub fn get_bytes(&self, target_path: &Path, content: &str) -> anyhow::Result<Vec<u8>> {
-        match self {
-            ProgramStdinType::File => Ok(fs::read(Path::new(target_path).join(content))?),
-            ProgramStdinType::Text => Ok(content.as_bytes().to_vec()),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ProgramStdin {
-    #[serde(rename = "type")]
-    ty: ProgramStdinType,
-    content: String,
-}
-
-impl ProgramStdin {
-    pub fn get_bytes(&self, path: &Path) -> anyhow::Result<Vec<u8>> {
-        self.ty.get_bytes(path, &self.content)
-    }
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct Bench {
     name: String,
-    args: Vec<String>,
-    stdin: Option<ProgramStdin>,
-    stdout: String,
+    env: HashMap<String, String>,
     programs: Vec<Program>,
 }
 
 impl Bench {
     pub fn bench(&self, opt: &Opt) -> anyhow::Result<()> {
         let bench_name = Color::Cyan.paint(&self.name);
+        let mut hyperfine_args = Vec::new();
 
         println!("Start {}...", bench_name);
 
-        let stdin_content: Vec<u8> = self
-            .stdin
-            .as_ref()
-            .map(|stdin| stdin.get_bytes(&opt.target))
-            .transpose()?
-            .unwrap_or_default();
-
-        let args: Vec<String> = self
-            .args
-            .iter()
-            .map(|arg| match arg.as_str() {
-                "$CONTENT_LENGTH$" => stdin_content.len().to_string(),
-                arg => arg.to_string(),
-            })
-            .collect();
-
         for program in self.programs.iter() {
-            program.bench(opt, &args, &stdin_content, self.stdout.as_bytes())?;
+            program.bench(opt, &mut hyperfine_args)?;
         }
+
+        let bench_exit_status = Command::new("hyperfine")
+            .current_dir(&opt.target)
+            .args(hyperfine_args)
+            .envs(&self.env)
+            .stdin(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .with_context(|| "Run benchmark")?
+            .wait()?;
+
+        assert!(bench_exit_status.success(), "Bench run failed");
 
         Ok(())
     }
@@ -282,8 +210,6 @@ pub struct Opt {
     build_output: PathBuf,
     #[structopt(short = "t", about = "Path where bench.yml exists")]
     target: PathBuf,
-    #[structopt(short = "c", about = "How many bench iterate", default_value = "10")]
-    bench_iter_count: u32,
 }
 
 fn main() -> anyhow::Result<()> {

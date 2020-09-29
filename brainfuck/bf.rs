@@ -1,16 +1,15 @@
 use std::env;
-use std::io::{self, BufReader, BufWriter, Bytes, Read, Write};
+use std::io::{self, BufWriter, Write};
 use std::iter;
 
-struct Program<R: Read, W: Write> {
+struct Program<W: Write> {
     source: Vec<u8>,
     bracket_pc: Vec<usize>,
     out: W,
-    input: Bytes<R>,
 }
 
-impl<R: Read, W: Write> Program<R, W> {
-    pub fn new(source: &[u8], input: R, out: W) -> Self {
+impl<W: Write> Program<W> {
+    pub fn new(source: &[u8], out: W) -> Self {
         let mut bf_source = Vec::with_capacity(source.len());
         let mut bracket_pc: Vec<usize> = iter::repeat(0).take(source.len()).collect();
         let mut stack = Vec::with_capacity(10);
@@ -36,7 +35,6 @@ impl<R: Read, W: Write> Program<R, W> {
 
         Self {
             out,
-            input: input.bytes(),
             source: bf_source,
             bracket_pc,
         }
@@ -66,9 +64,6 @@ impl<R: Read, W: Write> Program<R, W> {
                 b'.' => {
                     self.out.write(&[tape[ptr]]).unwrap();
                 }
-                b',' => {
-                    tape[ptr] = self.input.next().unwrap().unwrap();
-                }
                 b'[' => {
                     if tape[ptr] == 0 {
                         pc = self.bracket_pc[pc];
@@ -88,18 +83,14 @@ impl<R: Read, W: Write> Program<R, W> {
 }
 
 fn main() {
-    let stdin = io::stdin();
-    let stdin = stdin.lock();
-    let mut stdin = BufReader::with_capacity(8196, stdin);
     let stdout = io::stdout();
     let stdout = stdout.lock();
     let mut stdout = BufWriter::with_capacity(8196, stdout);
 
-    let source_length = env::args().nth(1).unwrap().parse().unwrap();
-    let mut source = vec![0u8; source_length];
-    stdin.read(&mut source).unwrap();
+    let source_file = env::var("GM_BF_FILE").unwrap();
+    let source = std::fs::read(source_file).unwrap();
 
-    let mut program = Program::new(&source, &mut stdin, &mut stdout);
+    let mut program = Program::new(&source, &mut stdout);
 
     program.run();
 }
